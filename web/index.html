@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tanks Management</title>
+    
+    <link rel="icon" href="icon.jpg" type="image/jpeg">
+    <style>
+        
+        .background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('world_of_tanks_background.jpg') no-repeat center center fixed;
+            background-size: cover;
+            filter: blur(8px); 
+            z-index: -1; 
+        }
+
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: rgba(0, 0, 0, 0.6); 
+            color: white;
+        }
+
+        
+        h1 {
+            text-align: center;
+            font-size: 3em;
+            margin-top: 20px;
+            color: #D4AF37; 
+        }
+
+        
+        button {
+            padding: 8px 16px;
+            background-color: #4B5320; 
+            color: white;
+            border: 2px solid #D4AF37; 
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #6B8E23;
+        }
+
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 30px;
+            text-align: center;
+            background-color: rgba(0, 0, 0, 0.7); 
+            border-radius: 10px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #3A5A40; 
+            color: #D4AF37; 
+        }
+
+        td {
+            color: #fff;
+        }
+
+       
+        .form-container {
+            margin: 20px 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        
+        input[type="text"], input[type="number"] {
+            padding: 8px;
+            margin-bottom: 10px;
+            width: 100%;
+            border: 1px solid #D4AF37; 
+            border-radius: 5px;
+            background-color: #2E3B2A; 
+            color: white;
+        }
+
+        
+        h3, label {
+            color: #D4AF37;
+        }
+
+    </style>
+</head>
+<body>
+
+    
+    <div class="background"></div>
+
+    <h1>Tanks Management</h1>
+
+    <div>
+        <button onclick="fetchTanks()">Get All Tanks</button>
+        <button onclick="showAddForm()">Add New Tank</button>
+    </div>
+
+    
+    <div id="addForm" class="form-container" style="display: none;">
+        <h3>Add New Tank</h3>
+        <label for="addName">Name: </label><input type="text" id="addName"><br>
+        <label for="addCountry">Country: </label><input type="text" id="addCountry"><br>
+        <label for="addGunCaliber">Gun Caliber: </label><input type="number" id="addGunCaliber"><br>
+        <label for="addFrontArmor">Front Armor: </label><input type="number" id="addFrontArmor"><br>
+        <label for="addSpeed">Speed: </label><input type="number" id="addSpeed"><br>
+        <label for="addCrew">Crew: </label><input type="number" id="addCrew"><br>
+        <button onclick="addTank()">Add Tank</button>
+        <button onclick="cancelAdd()">Cancel</button>
+    </div>
+
+    
+    <div id="editForm" class="form-container" style="display: none;">
+        <h3>Edit Tank</h3>
+        <label for="editName">Name: </label><input type="text" id="editName"><br>
+        <label for="editCountry">Country: </label><input type="text" id="editCountry"><br>
+        <label for="editGunCaliber">Gun Caliber: </label><input type="number" id="editGunCaliber"><br>
+        <label for="editFrontArmor">Front Armor: </label><input type="number" id="editFrontArmor"><br>
+        <label for="editSpeed">Speed: </label><input type="number" id="editSpeed"><br>
+        <label for="editCrew">Crew: </label><input type="number" id="editCrew"><br>
+        <button onclick="updateTank()">Update Tank</button>
+        <button onclick="cancelEdit()">Cancel</button>
+    </div>
+
+    
+    <table id="tanks-table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Country</th>
+                <th>Crew</th>
+                <th>Front Armor</th>
+                <th>Gun Caliber</th>
+                <th>Speed</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            
+        </tbody>
+    </table>
+
+    <script>
+        const apiUrl = 'http://localhost:8080/WebServiceRS/api/tanks'; 
+        let tanks = []; 
+        let editingTank = null; 
+
+        
+        async function fetchTanks() {
+            try {
+                const response = await fetch(apiUrl);
+                tanks = await response.json();
+                const tableBody = document.querySelector('#tanks-table tbody');
+                tableBody.innerHTML = ''; 
+
+                tanks.forEach(tank => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${tank.name}</td>
+                        <td>${tank.country}</td>
+                        <td>${tank.crew}</td>
+                        <td>${tank.frontArmor}</td>
+                        <td>${tank.gunCaliber}</td>
+                        <td>${tank.speed}</td>
+                        <td>
+                            <button onclick="editTank('${tank.name}')">Edit</button>
+                            <button onclick="deleteTank('${tank.name}')">Delete</button>
+                        </td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Error fetching tanks:', error);
+            }
+        }
+
+        
+        function getTankByName(name) {
+            return tanks.find(tank => tank.name === name);
+        }
+
+        
+        function editTank(name) {
+            const tank = getTankByName(name);
+            if (tank) {
+                editingTank = tank;
+                document.getElementById('editName').value = tank.name;
+                document.getElementById('editCountry').value = tank.country;
+                document.getElementById('editGunCaliber').value = tank.gunCaliber;
+                document.getElementById('editFrontArmor').value = tank.frontArmor;
+                document.getElementById('editSpeed').value = tank.speed;
+                document.getElementById('editCrew').value = tank.crew;
+
+                document.getElementById('editForm').style.display = 'block';
+            }
+        }
+
+       
+        async function updateTank() {
+            const updatedTank = {
+                name: document.getElementById('editName').value,
+                country: document.getElementById('editCountry').value,
+                gunCaliber: document.getElementById('editGunCaliber').value,
+                frontArmor: document.getElementById('editFrontArmor').value,
+                speed: document.getElementById('editSpeed').value,
+                crew: document.getElementById('editCrew').value
+            };
+
+            try {
+                const response = await fetch(`${apiUrl}/${editingTank.name}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updatedTank)
+                });
+
+                if (response.ok) {
+                    alert('Tank updated successfully!');
+                    fetchTanks();
+                    cancelEdit();
+                } else {
+                    alert('Failed to update tank');
+                }
+            } catch (error) {
+                console.error('Error updating tank:', error);
+            }
+        }
+
+        
+        function cancelEdit() {
+            document.getElementById('editForm').style.display = 'none';
+            editingTank = null;
+        }
+
+        
+        async function deleteTank(name) {
+            if (confirm(`Are you sure you want to delete tank ${name}?`)) {
+                try {
+                    const response = await fetch(`${apiUrl}/${name}`, { method: 'DELETE' });
+
+                    if (response.ok) {
+                        alert('Tank deleted successfully!');
+                        fetchTanks();
+                    } else {
+                        alert('Failed to delete tank');
+                    }
+                } catch (error) {
+                    console.error('Error deleting tank:', error);
+                }
+            }
+        }
+
+        
+        function showAddForm() {
+            document.getElementById('addForm').style.display = 'block';
+        }
+
+        
+        async function addTank() {
+            const newTank = {
+                name: document.getElementById('addName').value,
+                country: document.getElementById('addCountry').value,
+                gunCaliber: document.getElementById('addGunCaliber').value,
+                frontArmor: document.getElementById('addFrontArmor').value,
+                speed: document.getElementById('addSpeed').value,
+                crew: document.getElementById('addCrew').value
+            };
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(newTank)
+                });
+
+                if (response.ok) {
+                    alert('Tank added successfully!');
+                    fetchTanks();
+                    cancelAdd();
+                } else {
+                    alert('Failed to add tank');
+                }
+            } catch (error) {
+                console.error('Error adding tank:', error);
+            }
+        }
+
+        
+        function cancelAdd() {
+            document.getElementById('addForm').style.display = 'none';
+        }
+    </script>
+
+</body>
+</html>
+
+
